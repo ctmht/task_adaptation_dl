@@ -104,7 +104,7 @@ if __name__ == '__main__':
 	TEST_SIZE = 0.20
 	
 	ACTIVATION = 'relu'
-	HIDDEN_DIMS = [256, 256]
+	HIDDEN_DIMS = [64, 64, 64]
 	DROPOUT = 0.3
 	
 	X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, X_scaler, y_scaler = load_and_preprocess_data(
@@ -121,6 +121,8 @@ if __name__ == '__main__':
 		dropout = DROPOUT,
 	)
 	model.train()
+	
+	print('Model parameters count:', sum(p.numel() for p in model.parameters() if p.requires_grad))
 	
 	train_model(
 		model,
