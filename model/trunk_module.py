@@ -124,14 +124,14 @@ class TrunkModule(nn.Module):
 		"""
 		Docstring for eval_mcdropout
 		"""
-		self._mcdropout = True
 		super(TrunkModule, self).eval()
+		self._mcdropout = True
 
 
 
 if __name__ == '__main__':
-	BATCH_SIZE = 10
-	NUM_PREDICTORS = 50
+	BATCH_SIZE = 1
+	NUM_PREDICTORS = 10
 	N_FEATURES = 9
 	
 	model = TrunkModule(
@@ -141,8 +141,12 @@ if __name__ == '__main__':
 		dropout = 0.3
 	)
 	
-	dummy_in = torch.rand(BATCH_SIZE, NUM_PREDICTORS, N_FEATURES)
+	model.eval_mcdropout()
+	
+	# Check input-output shapes and that dropout masks actually apply uniquely
+	# to each predictor if we do this
+	dummy_in = torch.rand(BATCH_SIZE, N_FEATURES)
+	dummy_in = dummy_in.unsqueeze(1).repeat(1, NUM_PREDICTORS, 1)
 	dummy_out = model(dummy_in)
 	
-	print(dummy_in.shape)
-	print(dummy_out.shape)
+	print(dummy_in, dummy_out, dummy_in.shape, dummy_out.shape, sep='\n')

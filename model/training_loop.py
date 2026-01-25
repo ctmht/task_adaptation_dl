@@ -89,6 +89,8 @@ def train_model(
 		
 		epoch_score = np.mean(scores)
 		epoch_scores.append(epoch_score)
+		
+		# TODO: compute validation loss at the end of an epoch, maybe early stopping but prob overkill
 	
 	plt.plot(epoch_scores)
 	plt.show()
@@ -102,8 +104,8 @@ if __name__ == '__main__':
 	TEST_SIZE = 0.20
 	
 	ACTIVATION = 'relu'
-	HIDDEN_DIMS = [32]
-	DROPOUT = 0.0
+	HIDDEN_DIMS = [256, 256]
+	DROPOUT = 0.3
 	
 	X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, X_scaler, y_scaler = load_and_preprocess_data(
 		csv_path = CSV_PATH,
@@ -118,6 +120,7 @@ if __name__ == '__main__':
 		activation = ACTIVATION,
 		dropout = DROPOUT,
 	)
+	model.train()
 	
 	train_model(
 		model,
@@ -131,3 +134,5 @@ if __name__ == '__main__':
 		num_epochs = 5,
 		l2reg_strength = 0.0, # not implemented
 	)
+	
+	model.eval_mcdropout()
