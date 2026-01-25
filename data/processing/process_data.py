@@ -26,9 +26,6 @@ def load_and_preprocess_data(
     X = df.drop(columns='RMSD')
     y = df['RMSD']
 
-    # Log-transform target
-    y = np.log1p(y)
-
     # Log-transform selected features
     for feature in log_features:
         if feature in X.columns:
@@ -48,4 +45,9 @@ def load_and_preprocess_data(
     X_test_scaled = scaler.transform(X_test)
     joblib.dump(scaler, "scaler.pkl")
 
-    return X_train_scaled, X_test_scaled, y_train, y_test, scaler
+    # scale y separately
+    y_scaler = StandardScaler()
+    y_train_scaled = y_scaler.fit_transform(y_train.values.reshape(-1, 1))
+    y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1))
+
+    return X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, scaler
