@@ -50,4 +50,4 @@ def load_and_preprocess_data(
     y_train_scaled = y_scaler.fit_transform(y_train.values.reshape(-1, 1))
     y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1))
 
-    return X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, scaler
+    return X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, scaler, y_scaler

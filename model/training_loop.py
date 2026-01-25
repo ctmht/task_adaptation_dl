@@ -105,7 +105,7 @@ if __name__ == '__main__':
 	HIDDEN_DIMS = [32]
 	DROPOUT = 0.0
 	
-	X_train_scaled, X_test_scaled, y_train, y_test, scaler = load_and_preprocess_data(
+	X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, X_scaler, y_scaler = load_and_preprocess_data(
 		csv_path = CSV_PATH,
     	test_size = TEST_SIZE,
     	random_state = 42,
@@ -119,28 +119,13 @@ if __name__ == '__main__':
 		dropout = DROPOUT,
 	)
 	
-	# # Training hyperparameters
-	# lr = hyperparameters.get('lr', 1e-3)
-	# l2reg_strength = hyperparameters.get('l2reg_strength', 0.1)
-	# num_epochs = hyperparameters.get('num_epochs', 10)
-	# batch_size = hyperparameters.get('batch_size', 128)
-	# loss_reduction = hyperparameters.get('loss_reduction', 'mean')
-	# loss_ensemble = hyperparameters.get('loss_ensemble', False)
-	# loss_gk_gamma = hyperparameters.get('loss_gk_gamma', 1.0)
-	# score_loss = NAME_TO_SCORE[loss](
-	# 	reduction = loss_reduction,
-	# 	ensemble = loss_ensemble,
-	# 	loss_gk_gamma = loss_gk_gamma
-	# )
-	
-	# print(X_train_scaled, type(X_train_scaled), y_train, type(y_train), y_train.values, type(y_train.values), sep='\n')
-	
 	train_model(
 		model,
 		X_train_scaled,
-		y_train.values,
-		loss = 'gaussian_nll',
+		y_train_scaled,
+		loss = 'gaussian_kernel',
 		# Hyperparameters
+		loss_gk_gamma = 0.5, # only does something for loss == 'gaussian_kernel'
 		lr = 1e-3,
 		batch_size = 64,
 		num_epochs = 5,
