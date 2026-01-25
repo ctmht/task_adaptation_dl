@@ -8,16 +8,17 @@ import tqdm
 
 import matplotlib.pyplot as plt
 
+
 from data.processing.process_data import load_and_preprocess_data
-from trunk_module import TrunkModule
-import score_losses
+from model.trunk_module import TrunkModule
+from model.score_losses import *
 
 
 NAME_TO_SCORE = {
-	'gaussian_kernel': score_losses.GaussianKernelScore,
-	'gaussian_nll': score_losses.NLL,
-	'gaussian_se': score_losses.SquaredError,
-	'gaussian_crps': score_losses.NormalCRPS
+	'gaussian_kernel': GaussianKernelScore,
+	'gaussian_nll': NLL,
+	'gaussian_se': SquaredError,
+	'gaussian_crps': NormalCRPS
 }
 
 
@@ -55,8 +56,8 @@ def train_model(
 	optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0.0)
 	
 	# Convert to PyTorch tensors
-	X_train_pt = torch.from_numpy(X_train)
-	y_train_pt = torch.from_numpy(y_train)
+	X_train_pt = torch.tensor(X_train, dtype = torch.float32)
+	y_train_pt = torch.tensor(y_train, dtype = torch.float32)
 	
 	num_samples = len(X_train_pt)
 	indices = np.arange(num_samples)
@@ -72,8 +73,8 @@ def train_model(
 			batch_indices = indices[batch_start:batch_end]
 			
 			# Prepare batch
-			batch_X = X_train[batch_indices].to(device)
-			batch_y = y_train[batch_indices].to(device)
+			batch_X = X_train_pt[batch_indices].to(device)
+			batch_y = y_train_pt[batch_indices].to(device)
 			
 			# Forward pass
 			optimizer.zero_grad()
@@ -84,7 +85,7 @@ def train_model(
 			score.backward()
 			optimizer.step()
 			
-			scores.append(score)
+			scores.append(score.item())
 		
 		epoch_score = np.mean(scores)
 		epoch_scores.append(epoch_score)
@@ -97,7 +98,7 @@ def train_model(
 
 if __name__ == '__main__':
 	import os
-	CSV_PATH = os.path.abspath('..CASP.csv')
+	CSV_PATH = os.path.abspath('./CASP.csv')
 	TEST_SIZE = 0.20
 	
 	ACTIVATION = 'relu'
@@ -132,10 +133,12 @@ if __name__ == '__main__':
 	# 	loss_gk_gamma = loss_gk_gamma
 	# )
 	
+	# print(X_train_scaled, type(X_train_scaled), y_train, type(y_train), y_train.values, type(y_train.values), sep='\n')
+	
 	train_model(
 		model,
 		X_train_scaled,
-		y_train,
+		y_train.values,
 		loss = 'gaussian_nll',
 		# Hyperparameters
 		lr = 1e-3,
