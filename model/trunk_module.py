@@ -114,8 +114,8 @@ class TrunkModule(nn.Module):
 		:param mode: Description
 		:type mode: bool
 		"""
-		self._mcdropout = False
 		super(TrunkModule, self).train(mode = mode)
+		self._mcdropout = False
 	
 	
 	def eval_mcdropout(
