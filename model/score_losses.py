@@ -21,9 +21,9 @@ class GaussianKernelScore(nn.Module):
 	
 	def __init__(
 		self,
-		gamma: float,
 		reduction: Optional[str] = "mean",
 		ensemble: bool = False,
+		**kwargs
 	) -> None:
 		"""
 		Initialize class.
@@ -33,10 +33,13 @@ class GaussianKernelScore(nn.Module):
 			reduction (Optional[str], optional):  Defaults to "mean".
 			ensemble (bool, optional): Whether prediction has an additional dimension. Defaults to False.
 		"""
+		if 'loss_gk_gamma' not in kwargs:
+			raise ValueError("GaussianKernelScore class requires kernel bandwidth parameter 'loss_gk_gamma'.")
+		
 		super().__init__()
 		self.reduction = reduction
 		self.ensemble = ensemble
-		self.gamma = gamma
+		self.gamma = kwargs['loss_gk_gamma']
 	
 	
 	def forward(
@@ -85,6 +88,7 @@ class NLL(nn.Module):
 		self,
 		reduction: Optional[str] = "mean",
 		ensemble: bool = False,
+		**kwargs
 	) -> None:
 		"""
 		Initialize class.
@@ -128,6 +132,7 @@ class SquaredError(nn.Module):
 		self,
 		reduction: Optional[str] = "mean",
 		ensemble: bool = False,
+		**kwargs
 	) -> None:
 		"""
 		Initialize class.
@@ -170,6 +175,7 @@ class NormalCRPS(nn.Module):
 		self,
 		reduction: Optional[str] = "mean",
 		ensemble: bool = False,
+		**kwargs
 	) -> None:
 		"""
 		Initialize class.

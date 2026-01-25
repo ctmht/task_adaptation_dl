@@ -1,6 +1,8 @@
 numpy
 scipy
 torch
+scikit-learn
+joblib
 
 tqdm
 
