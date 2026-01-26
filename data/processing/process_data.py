@@ -149,7 +149,15 @@ def arff_to_train_val_test_h5(
                 df["arr_sin"] = np.sin(2 * np.pi * arr_min / 1440)
                 df["arr_cos"] = np.cos(2 * np.pi * arr_min / 1440)
 
-                # DayofMonth stays as is (already numeric)
+                # DayofMonth assumes non-leap year for simplicity (and lack of year)
+                MONTH_DAYS = np.array(
+                    [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+                )
+
+                days_in_month = MONTH_DAYS[m.values.astype(int) - 1]
+                dom_phase = 2 * np.pi * (df["DayofMonth"] - 1) / days_in_month
+                df["dom_sin"] = np.sin(dom_phase)
+                df["dom_cos"] = np.cos(dom_phase)
 
                 # z-transform remaining numeric features
                 df[z_cols] = x_scaler.transform(df[z_cols])
@@ -209,6 +217,16 @@ def arff_to_train_val_test_h5(
 
             df["arr_sin"] = np.sin(2 * np.pi * arr_min / 1440)
             df["arr_cos"] = np.cos(2 * np.pi * arr_min / 1440)
+
+            # DayofMonth assumes non-leap year for simplicity (and lack of year)
+            MONTH_DAYS = np.array(
+                [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+            )
+
+            days_in_month = MONTH_DAYS[m.values.astype(int) - 1]
+            dom_phase = 2 * np.pi * (df["DayofMonth"] - 1) / days_in_month
+            df["dom_sin"] = np.sin(dom_phase)
+            df["dom_cos"] = np.cos(dom_phase)
 
             df[z_cols] = x_scaler.transform(df[z_cols])
             y = pd.DataFrame(
