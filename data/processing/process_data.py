@@ -260,8 +260,12 @@ def arff_to_train_val_test_h5(
 
 
 if __name__ == "__main__":
+    import os
+    DATA_PATH = os.path.abspath('./data/AIRLINES_10M.arff')
+    print(DATA_PATH)
+    
     arff_to_train_val_test_h5(
-        arff_path="AIRLINES_10M.arff",
+        arff_path=DATA_PATH,
         train_h5="airlines_train.h5",
         val_h5="airlines_val.h5",
         test_h5="airlines_test.h5",
