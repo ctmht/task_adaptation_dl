@@ -1,4 +1,5 @@
 from copy import deepcopy
+import os
 from typing import Literal, Any
 
 import torch.nn.functional as F
@@ -6,7 +7,7 @@ import torch.nn as nn
 import torch
 from model.config_management import load_configs
 from model.datasets import get_dataset
-import pandas as pd
+from model.metrics_management import Metrics
 import numpy as np
 import tqdm
 
@@ -25,14 +26,41 @@ NAME_TO_SCORE = {
 RANDOM_SEED = 42
 
 
+class EarlyStopping:
+    def __init__(self, patience: int = 5) -> None:
+        self.patience = patience
+        self.last_improvement = 0
+        self.best = 1e100
+
+    def __call__(self, value: float) -> bool:
+        "returns True if the training should be stopped"
+        if value < self.best:
+            self.best = value
+            self.last_improvement = 0
+        else:
+            self.last_improvement += 1
+
+        return self.last_improvement >= self.patience
+
+
+def ensure_environment(path, overwrite: bool = True):
+    os.makedirs(path, exist_ok=overwrite)
+
+
 def _forwardpass_over_data(
     model,
     input_data,
     output_data,
     training: bool = False,
+    validation: bool = False,
     **hyperparameters: dict[str, Any],
 ):
     """ """
+    experiment_path = os.path.join(
+        "data", "logs", hyperparameters["base_name"], hyperparameters["_specific_name"]
+    )
+    ensure_environment(experiment_path)
+
     # Generally used hyperparameters, and definition of the scores (here as metrics)
     batch_size = hyperparameters.get("batch_size", 64)
     num_epochs = hyperparameters.get("num_epochs", 10)
@@ -46,7 +74,9 @@ def _forwardpass_over_data(
         name: val(reduction=reduction, ensemble=ensemble, loss_gk_gamma=gaussker_gamma)
         for name, val in NAME_TO_SCORE.items()
     }
+
     metrics = {name: [] for name in NAME_TO_SCORE.keys()}
+    metrics_manager = Metrics()
 
     if not training:
         # Test hyperparameters
@@ -62,7 +92,7 @@ def _forwardpass_over_data(
         lr = hyperparameters.get("lr", 1e-4)
 
         # Score used as loss
-        loss = hyperparameters["loss"]
+        loss = hyperparameters["loss_type"]
         score_loss = NAME_TO_SCORE[loss](
             reduction=reduction, ensemble=ensemble, loss_gk_gamma=gaussker_gamma
         )
@@ -71,6 +101,7 @@ def _forwardpass_over_data(
         if early_stopping:
             val_input_data = hyperparameters["val_input_data"]
             val_output_data = hyperparameters["val_output_data"]
+            early_stopping_tracker = EarlyStopping(patience=3)
 
         model.train()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0.0)
@@ -92,12 +123,10 @@ def _forwardpass_over_data(
     for epoch in range(num_epochs):
         if training:
             np.random.shuffle(indices)
+            print()
 
         scores = []
         metrics_perbatch = {name: [] for name in NAME_TO_SCORE.keys()}
-
-        if training:
-            print()
 
         # Iterate through batches
         for batch_start in tqdm.tqdm(
@@ -114,10 +143,9 @@ def _forwardpass_over_data(
             if training:
                 optimizer.zero_grad()
 
-            # Forward pass
-            pred_y = model(batch_X)
+                # Forward pass
+                pred_y = model(batch_X)
 
-            if training:
                 # Backward pass
                 score = score_loss(pred_y, batch_y)
 
@@ -125,11 +153,14 @@ def _forwardpass_over_data(
                 optimizer.step()
 
                 scores.append(score.item())
+            else:
+                pred_y = model(batch_X)
 
             # Metrics
             # TODO: also add UQ metrics
             for name, score_metric in score_metric_objs.items():
                 metric = score_metric(pred_y, batch_y)
+                metrics_manager(name, metric.item())
                 metrics_perbatch[name].append(metric.item())
 
         # Average metrics over all batches in the epoch and save in metrics
@@ -149,14 +180,37 @@ def _forwardpass_over_data(
         )
 
         if training:
-            if early_stopping:
-                test_model(model, val_input_data, val_output_data, **hyperparameters)
+            loss = validate_model(
+                model, val_input_data, val_output_data, **hyperparameters
+            )
+            if early_stopping and early_stopping_tracker(loss):
+                break
+
+    # hell yeah, nested one line if-statements!
+    metrics_manager.save(
+        experiment_path,
+        "train" if training else ("validation" if validation else "test"),
+    )
+
+    return np.mean(scores)
 
 
 def train_model(model, input_data, output_data, **hyperparameters: dict[str, Any]):
     """ """
     return _forwardpass_over_data(
         model, input_data, output_data, training=True, **hyperparameters
+    )
+
+
+def validate_model(model, input_data, output_data, **hyperparameters: dict[str, Any]):
+    """ """
+    return _forwardpass_over_data(
+        model,
+        input_data,
+        output_data,
+        training=False,
+        validation=True,
+        **hyperparameters,
     )
 
 
@@ -168,7 +222,8 @@ def test_model(model, input_data, output_data, **hyperparameters: dict[str, Any]
 
 
 def experiment_from_config(config: dict):
-    dataset = get_dataset(config["datasets"])
+    print("Running experiment from config:", config)
+    dataset = get_dataset(config["dataset_name"])
 
     model = TrunkModule(
         n_features=dataset.n_features,
@@ -184,15 +239,16 @@ def experiment_from_config(config: dict):
     )
 
     hyperparameters = dict(
-        loss=config["loss_type"],
-        loss_gk_gamma=config["loss_gk_gamma"],
-        lr=config["lr"],
-        batch_size=config["batch_size"],
-        num_epochs=config["num_epochs"],
-        l2reg_strength=config["l2reg_strength"],  # not implemented,
-        early_stopping=config["early_stopping"],
+        # loss=config["loss_type"],
+        # loss_gk_gamma=config["loss_gk_gamma"],
+        # lr=config["lr"],
+        # batch_size=config["batch_size"],
+        # num_epochs=config["num_epochs"],
+        # l2reg_strength=config["l2reg_strength"],  # not implemented,
+        # early_stopping=config["early_stopping"],
         val_input_data=dataset.val_features,
         val_output_data=dataset.test_features,
+        **config,
     )
 
     train_model(
@@ -207,7 +263,7 @@ def experiment_from_config(config: dict):
 
 
 def main():
-    configs = load_configs(path="src/config.json")
+    configs = load_configs(path="model/config.json")
     for i in configs:
         experiment_from_config(i)
 

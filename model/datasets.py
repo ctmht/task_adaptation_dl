@@ -1,7 +1,7 @@
 import os
 
-from torch import Value
-import pd
+import numpy as np
+import pandas as pd
 
 from collections import namedtuple
 
@@ -18,6 +18,18 @@ DatasetBundle = namedtuple(
         "n_features",
     ],
 )
+
+
+def get_random():
+    return DatasetBundle(
+        np.random.rand(10, 10),
+        np.random.rand(10, 1),
+        np.random.rand(10, 10),
+        np.random.rand(10, 1),
+        np.random.rand(10, 10),
+        np.random.rand(10, 1),
+        10,
+    )
 
 
 def get_airlines():
@@ -52,6 +64,7 @@ def get_dataset(dataset_name: str):
     match dataset_name:
         case "airlines":
             return get_airlines()
-
+        case "random":
+            return get_random()
         case _:
             raise ValueError(f"No dataset named: {dataset_name}")
