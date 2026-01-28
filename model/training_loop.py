@@ -14,11 +14,12 @@ from model.score_losses import *
 
 
 NAME_TO_SCORE = {
-	'gaussian_kernel': GaussianKernelScore,
-	'gaussian_nll': NLL,
-	'gaussian_se': SquaredError,
-	'gaussian_crps': NormalCRPS
+    "gaussian_kernel": GaussianKernelScore,
+    "gaussian_nll": NLL,
+    "gaussian_se": SquaredError,
+    "gaussian_crps": NormalCRPS,
 }
+RANDOM_SEED = 42
 
 
 def _forwardpass_over_data(
