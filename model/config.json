@@ -1,0 +1,10 @@
+{
+    "experiments": [
+        {
+            "model_name": "Trunk"
+        }
+    ],
+    "do_not_vary": [
+        "hidden_dims"
+    ]
+}
