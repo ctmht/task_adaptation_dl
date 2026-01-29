@@ -8,6 +8,19 @@ def mean(iterator):
     return sum(iterator) / len(iterator)
 
 
+def mean_and_dev(iterator):
+    it_mean = mean(iterator)
+    if len(iterator) <= 1:
+        return it_mean, 0.0
+    dev = sum((it_mean - i) ** 2 for i in iterator) / (len(iterator) - 1)
+    return it_mean, dev
+
+
+def stats(iterator):
+    it_mean, dev = mean_and_dev(iterator)
+    return it_mean, dev, min(iterator), max(iterator)
+
+
 class Metrics:
     def __init__(self) -> None:
         self.data = {}
@@ -37,10 +50,11 @@ class Metrics:
         }
 
     def save(self, path: str, sub_name: str) -> None:
-        print("Saving metrics to:", path)
-        print("data:", self.data)
+        print(f"Saving metrics {list(self.data.keys())} to:", path)
+        # print("data:", self.data)
+        compressed_data = {k: [stats(i) for i in v] for k, v in self.data.items()}
         pickle.dump(
-            self.data,
+            compressed_data,
             open(
                 os.path.join(
                     path,

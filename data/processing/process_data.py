@@ -52,14 +52,22 @@ def arff_to_train_val_test_h5(
     cols = read_arff_columns(arff_path)
 
     # numeric columns
-    numeric_cols = ["DepDelay", "Month", "DayofMonth", "DayOfWeek", "CRSDepTime", "CRSArrTime", "Distance"]
+    numeric_cols = [
+        "DepDelay",
+        "Month",
+        "DayofMonth",
+        "DayOfWeek",
+        "CRSDepTime",
+        "CRSArrTime",
+        "Distance",
+    ]
 
     # remaining numerical features to z-transform (NOT time ones)
     z_cols = ["Distance"]
 
     x_scaler = StandardScaler()
     y_scaler = StandardScaler()
-    
+
     rng = np.random.default_rng(seed)
     rows = []
 
@@ -176,20 +184,68 @@ def arff_to_train_val_test_h5(
                 test_mask = r >= (p_train + p_val)
 
                 # write (use compression everywhere so files are smaller)
-                X[train_mask].to_hdf(train_h5, key="X", mode="a", format="table", append=True,
-                                     index=False, complevel=9, complib="blosc")
-                y[train_mask].to_hdf(train_h5, key="y", mode="a", format="table", append=True,
-                                     index=False, complevel=9, complib="blosc")
+                X[train_mask].to_hdf(
+                    train_h5,
+                    key="X",
+                    mode="a",
+                    format="table",
+                    append=True,
+                    index=False,
+                    complevel=9,
+                    complib="blosc",
+                )
+                y[train_mask].to_hdf(
+                    train_h5,
+                    key="y",
+                    mode="a",
+                    format="table",
+                    append=True,
+                    index=False,
+                    complevel=9,
+                    complib="blosc",
+                )
 
-                X[val_mask].to_hdf(val_h5, key="X", mode="a", format="table", append=True,
-                                   index=False, complevel=9, complib="blosc")
-                y[val_mask].to_hdf(val_h5, key="y", mode="a", format="table", append=True,
-                                   index=False, complevel=9, complib="blosc")
+                X[val_mask].to_hdf(
+                    val_h5,
+                    key="X",
+                    mode="a",
+                    format="table",
+                    append=True,
+                    index=False,
+                    complevel=9,
+                    complib="blosc",
+                )
+                y[val_mask].to_hdf(
+                    val_h5,
+                    key="y",
+                    mode="a",
+                    format="table",
+                    append=True,
+                    index=False,
+                    complevel=9,
+                    complib="blosc",
+                )
 
-                X[test_mask].to_hdf(test_h5, key="X", mode="a", format="table", append=True,
-                                    index=False, complevel=9, complib="blosc")
-                y[test_mask].to_hdf(test_h5, key="y", mode="a", format="table", append=True,
-                                    index=False, complevel=9, complib="blosc")
+                X[test_mask].to_hdf(
+                    test_h5,
+                    key="X",
+                    mode="a",
+                    format="table",
+                    append=True,
+                    index=False,
+                    complevel=9,
+                    complib="blosc",
+                )
+                y[test_mask].to_hdf(
+                    test_h5,
+                    key="y",
+                    mode="a",
+                    format="table",
+                    append=True,
+                    index=False,
+                    complevel=9,
+                    complib="blosc",
+                )
 
                 rows = []
 
@@ -219,9 +275,7 @@ def arff_to_train_val_test_h5(
             df["arr_cos"] = np.cos(2 * np.pi * arr_min / 1440)
 
             # DayofMonth assumes non-leap year for simplicity (and lack of year)
-            MONTH_DAYS = np.array(
-                [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-            )
+            MONTH_DAYS = np.array([31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31])
 
             days_in_month = MONTH_DAYS[m.values.astype(int) - 1]
             dom_phase = 2 * np.pi * (df["DayofMonth"] - 1) / days_in_month
@@ -235,7 +289,9 @@ def arff_to_train_val_test_h5(
                 index=df.index,
             )
 
-            df = df.drop(columns=["Month", "DayOfWeek", "CRSDepTime", "CRSArrTime", target_col])
+            df = df.drop(
+                columns=["Month", "DayOfWeek", "CRSDepTime", "CRSArrTime", target_col]
+            )
             X = df
 
             r = rng.random(len(df))
@@ -243,27 +299,76 @@ def arff_to_train_val_test_h5(
             val_mask = (r >= p_train) & (r < p_train + p_val)
             test_mask = r >= (p_train + p_val)
 
-            X[train_mask].to_hdf(train_h5, key="X", mode="a", format="table", append=True,
-                                 index=False, complevel=9, complib="blosc")
-            y[train_mask].to_hdf(train_h5, key="y", mode="a", format="table", append=True,
-                                 index=False, complevel=9, complib="blosc")
+            X[train_mask].to_hdf(
+                train_h5,
+                key="X",
+                mode="a",
+                format="table",
+                append=True,
+                index=False,
+                complevel=9,
+                complib="blosc",
+            )
+            y[train_mask].to_hdf(
+                train_h5,
+                key="y",
+                mode="a",
+                format="table",
+                append=True,
+                index=False,
+                complevel=9,
+                complib="blosc",
+            )
 
-            X[val_mask].to_hdf(val_h5, key="X", mode="a", format="table", append=True,
-                               index=False, complevel=9, complib="blosc")
-            y[val_mask].to_hdf(val_h5, key="y", mode="a", format="table", append=True,
-                               index=False, complevel=9, complib="blosc")
+            X[val_mask].to_hdf(
+                val_h5,
+                key="X",
+                mode="a",
+                format="table",
+                append=True,
+                index=False,
+                complevel=9,
+                complib="blosc",
+            )
+            y[val_mask].to_hdf(
+                val_h5,
+                key="y",
+                mode="a",
+                format="table",
+                append=True,
+                index=False,
+                complevel=9,
+                complib="blosc",
+            )
 
-            X[test_mask].to_hdf(test_h5, key="X", mode="a", format="table", append=True,
-                                index=False, complevel=9, complib="blosc")
-            y[test_mask].to_hdf(test_h5, key="y", mode="a", format="table", append=True,
-                                index=False, complevel=9, complib="blosc")
+            X[test_mask].to_hdf(
+                test_h5,
+                key="X",
+                mode="a",
+                format="table",
+                append=True,
+                index=False,
+                complevel=9,
+                complib="blosc",
+            )
+            y[test_mask].to_hdf(
+                test_h5,
+                key="y",
+                mode="a",
+                format="table",
+                append=True,
+                index=False,
+                complevel=9,
+                complib="blosc",
+            )
 
 
 if __name__ == "__main__":
     import os
-    DATA_PATH = os.path.abspath('./data/AIRLINES_10M.arff')
+
+    DATA_PATH = os.path.abspath("./data/AIRLINES_10M.arff")
     print(DATA_PATH)
-    
+
     arff_to_train_val_test_h5(
         arff_path=DATA_PATH,
         train_h5="airlines_train.h5",
@@ -272,5 +377,6 @@ if __name__ == "__main__":
         target_col="DepDelay",
         splits=(0.8, 0.1, 0.1),
         seed=42,
-        chunksize=250_000,  #chunking so i don't run out of memory :')
+        chunksize=250_000,  # chunking so i don't run out of memory :')
     )
+

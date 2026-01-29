@@ -6,15 +6,19 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch
 from model.config_management import load_configs
-from model.datasets import get_dataset
-from model.metrics_management import Metrics
+from model.datasets import get_dataloader, get_dataset
+from model.metrics_management import Metrics, mean
 import numpy as np
 import tqdm
+from tqdm import tqdm as tqdm_bar
 
 import matplotlib.pyplot as plt
 
 from model.trunk_module import TrunkModule
 from model.score_losses import *
+
+
+torch.multiprocessing.set_start_method("fork", force=True)
 
 
 NAME_TO_SCORE = {
@@ -24,6 +28,7 @@ NAME_TO_SCORE = {
     "gaussian_crps": NormalCRPS,
 }
 RANDOM_SEED = 42
+GLOBAL_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class EarlyStopping:
@@ -34,6 +39,7 @@ class EarlyStopping:
 
     def __call__(self, value: float) -> bool:
         "returns True if the training should be stopped"
+        print("\n\n", value, "\n\n")
         if value < self.best:
             self.best = value
             self.last_improvement = 0
@@ -107,7 +113,7 @@ def _forwardpass_over_data(
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0.0)
 
     # Setup model device
-    device_name = "cuda" if torch.cuda.is_available() else "cpu"
+    device_name = GLOBAL_DEVICE
     device = torch.device(device_name)
     model = model.to(device)
 
@@ -121,6 +127,7 @@ def _forwardpass_over_data(
     # Iterate through epochs
     epoch_losses = []
     for epoch in range(num_epochs):
+        metrics_manager.new_epoch()
         if training:
             np.random.shuffle(indices)
             print()
@@ -128,18 +135,24 @@ def _forwardpass_over_data(
         scores = []
         metrics_perbatch = {name: [] for name in NAME_TO_SCORE.keys()}
 
-        # Iterate through batches
-        for batch_start in tqdm.tqdm(
-            range(0, num_samples, batch_size),
+        # # Iterate through batches
+        # for batch_start in tqdm.tqdm(
+        #     range(0, num_samples, batch_size),
+        #     desc=f"Epoch {epoch + 1}" if training else "Testing",
+        # ):
+        #     # Prepare batch
+        #     batch_end = min(batch_start + batch_size, num_samples)
+        #     batch_indices = indices[batch_start:batch_end]
+        #
+        #     batch_X = X_tensor[batch_indices].to(device)
+        #     batch_y = y_tensor[batch_indices].to(device)
+        #
+        for batch_X, batch_y in tqdm_bar(
+            get_dataloader(X_tensor, y_tensor, batch_size),
             desc=f"Epoch {epoch + 1}" if training else "Testing",
         ):
-            # Prepare batch
-            batch_end = min(batch_start + batch_size, num_samples)
-            batch_indices = indices[batch_start:batch_end]
-
-            batch_X = X_tensor[batch_indices].to(device)
-            batch_y = y_tensor[batch_indices].to(device)
-
+            batch_X = batch_X.to(device)
+            batch_y = batch_y.to(device)
             if training:
                 optimizer.zero_grad()
 
@@ -192,7 +205,7 @@ def _forwardpass_over_data(
         "train" if training else ("validation" if validation else "test"),
     )
 
-    return np.mean(scores)
+    return mean(metrics[hyperparameters["loss_type"]])
 
 
 def train_model(model, input_data, output_data, **hyperparameters: dict[str, Any]):
@@ -263,8 +276,8 @@ def experiment_from_config(config: dict):
 
 
 def main():
-    configs = load_configs(path="model/config.json")
-    for i in configs:
+    configs = load_configs(path="model/config4.json")
+    for i in tqdm_bar(configs):
         experiment_from_config(i)
 
 

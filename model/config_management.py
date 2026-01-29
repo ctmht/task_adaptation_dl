@@ -28,6 +28,7 @@ def load_configs(path: str) -> list[dict]:
             raise ValueError("Each individual config must contain a 'base_name'")
         configs += vary_lists_configs(i, meta_config["do_not_vary"])
 
+    print(configs)
     return configs
 
 
@@ -38,11 +39,14 @@ def vary_lists_configs(
     variations = variations or {}
     for k, v in config.items():
         if isinstance(v, list) and k not in leave_out:
+            new_leave_out = deepcopy(leave_out)
+            new_leave_out.append(k)
             for i in v:
+                print(k, i)
                 config_copy = deepcopy(config)
                 config_copy[k] = i
                 variations[str(k)] = str(i)
-                configs += vary_lists_configs(config_copy, leave_out, variations)
+                configs += vary_lists_configs(config_copy, new_leave_out, variations)
             return configs
 
     if not variations:
