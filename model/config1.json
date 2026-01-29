@@ -1,0 +1,22 @@
+{
+    "experiments": [
+        {
+            "base_name": "airlines_net_arch_lr",
+            "dataset_name": "airlines",
+            "lr": [
+                1e-4
+            ],
+            "loss_type": "gaussian_se",
+            "num_epochs": 100,
+            "hidden_dims": [
+                [
+                    64,
+                    64,
+                    64
+                ]
+            ],
+            "batch_size": 128
+        }
+    ],
+    "do_not_vary": []
+}

@@ -110,6 +110,7 @@ def _forwardpass_over_data(
             early_stopping_tracker = EarlyStopping(patience=3)
 
         model.train()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0.0)
 
     # Setup model device
@@ -276,7 +277,7 @@ def experiment_from_config(config: dict):
 
 
 def main():
-    configs = load_configs(path="model/config4.json")
+    configs = load_configs(path="model/config1.json")
     for i in tqdm_bar(configs):
         experiment_from_config(i)
 

@@ -27,7 +27,7 @@ class ArrayDataset(Dataset):
         self.labels = labels
 
     def __len__(self) -> int:
-        return self.data_points.shape[0]
+        return min(1000000, self.data_points.shape[0])
 
     def __getitem__(self, index: int):
         return self.data_points[index], self.labels[index]
@@ -58,6 +58,29 @@ def get_airlines():
     y_test = pd.read_hdf(TEST_PATH, mode="r", key="y")
 
     # # TODO: UniqueCarrier, Origin, Dest need one-hot, or maybe they just don't?
+
+    for var in ["DayofMonth", "UniqueCarrier", "Origin", "Dest"]:
+        # X_train_dummies = pd.get_dummies(X_train[var])
+        # X_train = pd.concat([X_train, X_train_dummies], axis=1).drop([var], axis=1)
+        # X_train[var] = pd.Categorical(getattr(X_train, var))
+        # X_train["categorical_" + var] = getattr(X_train, var).codes
+        X_train["categorical_" + var] = pd.Categorical(getattr(X_train, var)).codes
+        X_train.drop([var], axis="columns")
+
+        # X_test_dummies = pd.get_dummies(X_test[var])
+        # X_test = pd.concat([X_test, X_test_dummies], axis=1).drop([var], axis=1)
+        # setattr(X_test, var, pd.Categorical(getattr(X_test, var)))
+        # X_test["categorical_" + var] = getattr(X_test, var).codes
+        X_test["categorical_" + var] = pd.Categorical(getattr(X_test, var)).codes
+        X_test.drop([var], axis="columns")
+
+        # X_val_dummies = pd.get_dummies(X_val[var])
+        # X_val = pd.concat([X_val, X_val_dummies], axis=1).drop([var], axis=1)
+        # setattr(X_val, var, pd.Categorical(getattr(X_val, var)))
+        # X_val["categorical_" + var] = getattr(X_val, var).codes
+        X_val["categorical_" + var] = pd.Categorical(getattr(X_val, var)).codes
+        X_val.drop([var], axis="columns")
+
     X_train = X_train.drop(
         ["DayofMonth", "UniqueCarrier", "Origin", "Dest"], axis="columns"
     ).values
@@ -79,7 +102,7 @@ def get_airlines():
     # print(y_test)
     # print(y_train.shape, y_test.shape)
 
-    return DatasetBundle(X_train, y_train, X_test, y_test, X_val, y_val, 11)
+    return DatasetBundle(X_train, y_train, X_test, y_test, X_val, y_val, 15)
 
 
 def get_dataset(dataset_name: str):
