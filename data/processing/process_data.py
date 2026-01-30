@@ -4,6 +4,8 @@ import pandas as pd
 import os
 from sklearn.preprocessing import StandardScaler
 import pickle
+import re
+import os
 
 
 def read_arff_columns(arff_path: str) -> list[str]:
@@ -28,6 +30,29 @@ def hhmm_to_minutes(series: pd.Series) -> pd.Series:
     m = s % 100
     return (h * 60 + m).astype("float64")
 
+def read_arff_nominal_values(arff_path, attr_name):
+    """
+    reads the ARFF header and extracts the allowed categorical values for one nominal attribute,
+    like all airports for Origin or all carriers for UniqueCarrier
+    """
+    pat = re.compile(r"^@attribute\s+" + re.escape(attr_name) + r"\s+\{(.*)\}\s*$", re.IGNORECASE)
+    with open(arff_path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            s = line.strip()
+            m = pat.match(s)
+            if m:
+                inside = m.group(1)
+                # split by commas and strip whitespace and quotes
+                vals = []
+                for v in inside.split(","):
+                    v = v.strip()
+                    if (v.startswith("'") and v.endswith("'")) or (v.startswith('"') and v.endswith('"')):
+                        v = v[1:-1]
+                    vals.append(v)
+                return vals
+            if s.lower().startswith("@data"):
+                break
+    raise ValueError(f"Could not find nominal values for attribute {attr_name} in header")
 
 def arff_to_train_val_test_h5(
     arff_path: str,
@@ -50,6 +75,25 @@ def arff_to_train_val_test_h5(
             os.remove(path)
 
     cols = read_arff_columns(arff_path)
+
+    # categorical encoders
+    carriers = read_arff_nominal_values(arff_path, "UniqueCarrier")
+    origins  = read_arff_nominal_values(arff_path, "Origin")
+    dests    = read_arff_nominal_values(arff_path, "Dest")
+
+    # Origin and Dest must share the SAME mapping
+    airport_levels = sorted(set(origins) | set(dests))
+
+    carrier_to_id = {c: i for i, c in enumerate(carriers, start=1)}
+    airport_to_id = {a: i for i, a in enumerate(airport_levels, start=1)}
+
+    # save integer encoders to decode later if needed
+    with open("cat_encoders.pkl", "wb") as f:
+        pickle.dump(
+            {"carrier_to_id": carrier_to_id, "airport_to_id": airport_to_id,
+            "carriers": carriers, "airport_levels": airport_levels},
+            f
+    )
 
     # numeric columns
     numeric_cols = [
@@ -138,6 +182,11 @@ def arff_to_train_val_test_h5(
                     df[c] = pd.to_numeric(df[c], errors="coerce")
                 df = df.dropna(subset=[target_col])
 
+                # encode categoricals (GLOBAL mapping)
+                df["UniqueCarrier"] = df["UniqueCarrier"].map(carrier_to_id).fillna(0).astype("int32")
+                df["Origin"] = df["Origin"].map(airport_to_id).fillna(0).astype("int32")
+                df["Dest"]   = df["Dest"].map(airport_to_id).fillna(0).astype("int32")
+
                 # sin/cos time features
                 m = df["Month"]
                 dow = df["DayOfWeek"]
@@ -170,12 +219,16 @@ def arff_to_train_val_test_h5(
                 # z-transform remaining numeric features
                 df[z_cols] = x_scaler.transform(df[z_cols])
 
-                # drop raw time columns now theyre encoded
-                df = df.drop(columns=["Month", "DayOfWeek", "CRSDepTime", "CRSArrTime"])
+                y = pd.DataFrame(
+                    y_scaler.transform(df[[target_col]]),
+                    columns=[target_col],
+                    index=df.index,
+                )
 
-                # split into X and y
-                y = df[[target_col]]
-                X = df.drop(columns=[target_col])
+                df = df.drop(
+                    columns=["Month", "DayOfWeek", "CRSDepTime", "CRSArrTime", target_col]
+                )
+                X = df
 
                 # same split logic (random per row)
                 r = rng.random(len(df))
@@ -255,6 +308,11 @@ def arff_to_train_val_test_h5(
             for c in numeric_cols:
                 df[c] = pd.to_numeric(df[c], errors="coerce")
             df = df.dropna(subset=[target_col])
+
+            # encode categoricals (GLOBAL mapping)
+            df["UniqueCarrier"] = df["UniqueCarrier"].map(carrier_to_id).fillna(0).astype("int32")
+            df["Origin"] = df["Origin"].map(airport_to_id).fillna(0).astype("int32")
+            df["Dest"]   = df["Dest"].map(airport_to_id).fillna(0).astype("int32")
 
             m = df["Month"]
             dow = df["DayOfWeek"]
@@ -364,9 +422,7 @@ def arff_to_train_val_test_h5(
 
 
 if __name__ == "__main__":
-    import os
-
-    DATA_PATH = os.path.abspath("./data/AIRLINES_10M.arff")
+    DATA_PATH = os.path.abspath("./AIRLINES_10M.arff")
     print(DATA_PATH)
 
     arff_to_train_val_test_h5(
