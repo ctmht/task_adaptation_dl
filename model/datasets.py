@@ -95,6 +95,9 @@ def get_airlines():
         ["DayofMonth"],#, "UniqueCarrier", "Origin", "Dest"],
         axis="columns"
     ).values
+    X_test = X_test.drop(
+        ["DayofMonth", "UniqueCarrier", "Origin", "Dest"], axis="columns"
+    ).values
 
     y_train = y_train.values
     y_val = y_val.values

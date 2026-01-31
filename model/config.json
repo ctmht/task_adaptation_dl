@@ -1,17 +1,14 @@
 {
     "experiments": [
         {
-            "base_name": "first_test",
+            "base_name": "first_airlines_test",
             "dataset_name": "random",
             "lr": [
                 1e-3,
-                1e-4,
                 1e-5
             ],
             "num_epochs": [
-                10,
-                20,
-                30
+                3
             ]
         }
     ],
