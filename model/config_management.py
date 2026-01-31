@@ -11,7 +11,7 @@ DEFAULT_CONFIG = {
     "activation": "relu",
     "dropout": 0.3,
     "loss_type": "gaussian_kernel",
-    "loss_gk_gamma": 0.5,  # only does something for loss == 'gaussian_kernel'
+    "loss_gk_gamma": 2.0,  # only does something for loss == 'gaussian_kernel'
     "lr": 1e-3,
     "batch_size": 64,
     "num_epochs": 5,

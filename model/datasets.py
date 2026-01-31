@@ -56,10 +56,11 @@ def get_airlines():
     y_val = pd.read_hdf(VAL_PATH, mode="r", key="y")
     X_test = pd.read_hdf(TEST_PATH, mode="r", key="X")
     y_test = pd.read_hdf(TEST_PATH, mode="r", key="y")
-
-    # # TODO: UniqueCarrier, Origin, Dest need one-hot, or maybe they just don't?
-
-    for var in ["DayofMonth", "UniqueCarrier", "Origin", "Dest"]:
+    
+    '''
+    # UniqueCarrier, Origin, Dest need encoding
+    for var in ["UniqueCarrier", "Origin", "Dest"]:
+        
         # X_train_dummies = pd.get_dummies(X_train[var])
         # X_train = pd.concat([X_train, X_train_dummies], axis=1).drop([var], axis=1)
         # X_train[var] = pd.Categorical(getattr(X_train, var))
@@ -80,15 +81,19 @@ def get_airlines():
         # X_val["categorical_" + var] = getattr(X_val, var).codes
         X_val["categorical_" + var] = pd.Categorical(getattr(X_val, var)).codes
         X_val.drop([var], axis="columns")
+    '''
 
     X_train = X_train.drop(
-        ["DayofMonth", "UniqueCarrier", "Origin", "Dest"], axis="columns"
+        ["DayofMonth"],#, "UniqueCarrier", "Origin", "Dest"],
+        axis="columns"
     ).values
     X_val = X_val.drop(
-        ["DayofMonth", "UniqueCarrier", "Origin", "Dest"], axis="columns"
+        ["DayofMonth"],#, "UniqueCarrier", "Origin", "Dest"],
+        axis="columns"
     ).values
     X_test = X_test.drop(
-        ["DayofMonth", "UniqueCarrier", "Origin", "Dest"], axis="columns"
+        ["DayofMonth"],#, "UniqueCarrier", "Origin", "Dest"],
+        axis="columns"
     ).values
 
     y_train = y_train.values
@@ -101,8 +106,9 @@ def get_airlines():
     print(y_train.shape, y_val.shape)
     # print(y_test)
     # print(y_train.shape, y_test.shape)
-
-    return DatasetBundle(X_train, y_train, X_test, y_test, X_val, y_val, 15)
+    
+    n_features = 14
+    return DatasetBundle(X_train, y_train, X_test, y_test, X_val, y_val, n_features)
 
 
 def get_dataset(dataset_name: str):

@@ -348,7 +348,7 @@ def arff_to_train_val_test_h5(
             )
 
             df = df.drop(
-                columns=["Month", "DayOfWeek", "CRSDepTime", "CRSArrTime", target_col]
+                columns=["DayofMonth", "Month", "DayOfWeek", "CRSDepTime", "CRSArrTime", target_col]
             )
             X = df
 
@@ -422,17 +422,22 @@ def arff_to_train_val_test_h5(
 
 
 if __name__ == "__main__":
-    DATA_PATH = os.path.abspath("./AIRLINES_10M.arff")
+    DATA_PATH = os.path.abspath("data/AIRLINES_10M.arff")
     print(DATA_PATH)
-
+    
+    TRAIN_PATH = os.path.abspath("airlines_train.h5")
+    VAL_PATH = os.path.abspath("airlines_val.h5")
+    TEST_PATH = os.path.abspath("airlines_test.h5")
+    print(TRAIN_PATH, VAL_PATH, TEST_PATH, sep='\n')
+    
     arff_to_train_val_test_h5(
-        arff_path=DATA_PATH,
-        train_h5="airlines_train.h5",
-        val_h5="airlines_val.h5",
-        test_h5="airlines_test.h5",
-        target_col="DepDelay",
-        splits=(0.8, 0.1, 0.1),
-        seed=42,
-        chunksize=250_000,  # chunking so i don't run out of memory :')
+        arff_path = DATA_PATH,
+        train_h5 = TRAIN_PATH,
+        val_h5 = VAL_PATH,
+        test_h5 = TEST_PATH,
+        target_col = "DepDelay",
+        splits = (0.8, 0.1, 0.1),
+        seed = 42,
+        chunksize = 250_000,  # chunking so i don't run out of memory :')
     )
 

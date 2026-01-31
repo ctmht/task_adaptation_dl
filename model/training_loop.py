@@ -1,24 +1,23 @@
 from copy import deepcopy
+from typing import Any
 import os
-from typing import Literal, Any
 
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
-from model.config_management import load_configs
-from model.datasets import get_dataloader, get_dataset
-from model.metrics_management import Metrics, mean
 import numpy as np
-import tqdm
 from tqdm import tqdm as tqdm_bar
 
 import matplotlib.pyplot as plt
 
+from model.config_management import load_configs
+from model.datasets import get_dataloader, get_dataset
+from model.metrics_management import Metrics, mean
 from model.trunk_module import TrunkModule
 from model.score_losses import *
 
 
-torch.multiprocessing.set_start_method("fork", force=True)
+# torch.multiprocessing.set_start_method("fork", force=True)
 
 
 NAME_TO_SCORE = {
@@ -90,8 +89,10 @@ def _forwardpass_over_data(
         num_epochs = 1  # Force one epoch
 
         if use_mcdropout:
+            print("Not training this epoch. Using model.eval_mcdropout()")
             model.eval_mcdropout()
         else:
+            print("Not training this epoch. Using model.eval()")
             model.eval()
     else:
         # Training hyperparameters
@@ -110,7 +111,6 @@ def _forwardpass_over_data(
             early_stopping_tracker = EarlyStopping(patience=3)
 
         model.train()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0.0)
 
     # Setup model device
@@ -136,18 +136,7 @@ def _forwardpass_over_data(
         scores = []
         metrics_perbatch = {name: [] for name in NAME_TO_SCORE.keys()}
 
-        # # Iterate through batches
-        # for batch_start in tqdm.tqdm(
-        #     range(0, num_samples, batch_size),
-        #     desc=f"Epoch {epoch + 1}" if training else "Testing",
-        # ):
-        #     # Prepare batch
-        #     batch_end = min(batch_start + batch_size, num_samples)
-        #     batch_indices = indices[batch_start:batch_end]
-        #
-        #     batch_X = X_tensor[batch_indices].to(device)
-        #     batch_y = y_tensor[batch_indices].to(device)
-        #
+        # Iterate through batches
         for batch_X, batch_y in tqdm_bar(
             get_dataloader(X_tensor, y_tensor, batch_size),
             desc=f"Epoch {epoch + 1}" if training else "Testing",
@@ -164,6 +153,11 @@ def _forwardpass_over_data(
                 score = score_loss(pred_y, batch_y)
 
                 score.backward()
+                
+                # Clip the norm of all gradients acquired through backprop (rescale down to 3.0 if higher)
+                max_norm = 3.0
+                _ = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
+                
                 optimizer.step()
 
                 scores.append(score.item())
