@@ -4,8 +4,7 @@
             "base_name": "first_airlines_test",
             "dataset_name": "random",
             "lr": [
-                1e-3,
-                1e-5
+                1e-6
             ],
             "num_epochs": [
                 3

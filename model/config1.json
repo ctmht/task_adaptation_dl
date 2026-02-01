@@ -2,16 +2,16 @@
     "experiments": [
         {
             "base_name": "airlines_net_arch_lr",
-            "dataset_name": "airlines",
+            "dataset_name": "casp",
             "lr": [
-                1e-4
+                1e-5
             ],
             "loss_type": "gaussian_se",
             "num_epochs": 100,
             "hidden_dims": [
                 [
-                    1024,
-                    1024,
+                    512,
+                    512,
                     512,
                     512
                 ]

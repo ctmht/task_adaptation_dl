@@ -153,16 +153,17 @@ def _forwardpass_over_data(
                 score = score_loss(pred_y, batch_y)
 
                 score.backward()
-                
+
                 # Clip the norm of all gradients acquired through backprop (rescale down to 3.0 if higher)
                 max_norm = 3.0
                 _ = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-                
+
                 optimizer.step()
 
                 scores.append(score.item())
             else:
                 pred_y = model(batch_X)
+                # print(batch_X.shape, batch_y.shape, pred_y.shape)
 
             # Metrics
             # TODO: also add UQ metrics
@@ -254,8 +255,8 @@ def experiment_from_config(config: dict):
         # num_epochs=config["num_epochs"],
         # l2reg_strength=config["l2reg_strength"],  # not implemented,
         # early_stopping=config["early_stopping"],
-        val_input_data=dataset.val_features,
-        val_output_data=dataset.test_features,
+        val_input_data=dataset.train_features,
+        val_output_data=dataset.train_labels,
         **config,
     )
 
