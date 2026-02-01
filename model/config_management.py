@@ -14,7 +14,7 @@ DEFAULT_CONFIG = {
     "loss_gk_gamma": 2.0,  # only does something for loss == 'gaussian_kernel'
     "lr": 1e-3,
     "batch_size": 64,
-    "num_epochs": 5,
+    "num_epochs": 100,
     "l2reg_strength": 0.0,
     "early_stopping": True,
 }

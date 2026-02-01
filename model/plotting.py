@@ -5,14 +5,41 @@ from torch import tensor, Tensor
 import torch
 import seaborn as sns
 import os
+from rich.console import Console
+from rich.table import Table
+from rich import box
+import re
 
-from metrics import Metrics
+from metrics_management import Metrics
 
 sns.set_theme()
 
 
 def mean(iterable):
     return sum(iterable) / len(iterable)
+
+
+def attempt_float_conversion(text):
+    try:
+        return float(text)
+    except Exception as e:
+        return text
+
+
+def ordering_key(text: str):
+    # https://stackoverflow.com/questions/5967500/how-to-correctly-sort-a-string-with-a-number-inside
+    # https://stackoverflow.com/questions/12643009/regular-expression-for-floating-point-numbers
+    return [
+        attempt_float_conversion(c)
+        for c in re.split(
+            r"[+-]?(\d+([.]\d*)?([eE][+-]?\d+)?|[.]\d+([eE][+-]?\d+)?)", text
+        )
+    ]
+
+
+def ordered_dict(dictionary):
+    keys = sorted(list(dictionary.keys()), key=ordering_key)
+    return ((k, dictionary[k]) for k in keys)
 
 
 def test_performance_line(
@@ -36,7 +63,7 @@ def test_performance_line(
     if log:
         plt.yscale("log")
     if path is not None:
-        fig.savefig(f"data/logs/automatic/{path}")
+        fig.savefig(f"data/logs/{path}")
     if show:
         plt.show()
     plt.close("all")
@@ -89,103 +116,24 @@ def variable_value_lines(
         plt.yscale("log")
     if path is not None:
         print("saved")
-        fig.savefig(f"data/logs/manual/{path}.png", dpi=300)
+        fig.savefig(f"data/images/{path}.png", dpi=300)
     if show:
         plt.show()
     plt.close("all")
 
 
-def show_image_grid(
-    images: list,
-    shape: tuple[int, int],
-    vmax: int | float | None = 1.0,
-    path: str | None = None,
-    show: bool = True,
-) -> None:
-    fig = plt.figure(figsize=(16.0, 9.0))
-    grid = ImageGrid(
-        fig,
-        111,  # similar to subplot(111)
-        nrows_ncols=shape,
-        axes_pad=0.0,
-    )
+def print_table(columns: list[str], data: list[list], title: str = ""):
+    table = Table(title=title, box=box.ROUNDED)
 
-    for ax, im in zip(grid, images):
-        ax.imshow(im, vmax=vmax)
+    table.add_column(columns[0], justify="right", style="cyan", no_wrap=True)
+    for column in columns[1:]:
+        table.add_column(column, justify="right", style="green", no_wrap=True)
 
-    if path:
-        fig.savefig(path, format="pdf")
-    if show:
-        plt.show()
-    plt.close("all")
+    for row in data:
+        table.add_row(*row)
 
-
-def vae_visual_appraisal(
-    model,
-    task_name,
-    example_images: list[Tensor] | None = None,
-    device=None,
-    show: bool = True,
-):
-    """
-    No, you don't want to take a close look at this function.
-    """
-    model.eval()
-    value_range = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
-    value_range = [5 * i for i in value_range]
-    if device is None:
-        device = (
-            torch.device("cuda") if torch.cuda.is_available else torch.device("cpu")
-        )
-    image_grid = [
-        model.generate(
-            tensor([a, b] + [0] * (model.latent_size - 2)).view(1, 1, -1).to(device)
-        )
-        for a, b in product(value_range, repeat=2)
-    ]
-    show_image_grid(
-        image_grid,
-        (8, 8),
-        1,
-        f"data/logs/automatic/{task_name}/images/latent_grid.pdf",
-        show,
-    )
-    if example_images is None:
-        return
-    image_size = image_grid[0].shape[-2:]
-    show_image_grid(
-        [i.cpu()[0] for i in example_images]
-        + [
-            model(i.view(1, -1, image_size[0], image_size[1]).to(device))[0][0, 0]
-            .detach()
-            .cpu()
-            .numpy()
-            for i in example_images
-        ],
-        (2, 10),
-        1,
-        f"data/logs/automatic/{task_name}/images/examples_predicted.pdf",
-        show,
-    )
-    show_image_grid(
-        [i.cpu()[0] for i in example_images]
-        + [
-            model(i.view(1, -1, image_size[0], image_size[1]).to(device))[0][0, 0]
-            .detach()
-            .cpu()
-            .numpy()
-            for i in example_images
-        ],
-        (2, 10),
-        None,
-        f"data/logs/automatic/{task_name}/images/examples_predicted_normalized.pdf",
-        show,
-    )
-    # show_image_grid(
-    #     [model.generate(device=device) for _ in range(64)],
-    #     (8, 8),
-    #     f"data/images/{task_name}_generated_grid.pdf",
-    # )
+    console = Console()
+    console.print(table, no_wrap=True)
 
 
 def list_dir_visible(path: str):
@@ -195,31 +143,60 @@ def list_dir_visible(path: str):
             yield i
 
 
-def get_metric(experiment_name: str, metric_name: str) -> list:
-    """Get a metric from an experiment log"""
-    path = f"data/logs/automatic/{experiment_name}/metrics"
-    latest = max(list_dir_visible(path))
-    path = os.path.join(path, latest)
-    metrics = Metrics({})
-    metrics.load(path)
-    return metrics.archived_metrics[metric_name]
+# def get_metric(experiment_name: str, metric_name: str) -> list:
+#     """Get a metric from an experiment log"""
+#     path = f"data/logs/{experiment_name}/metrics"
+#     latest = max(list_dir_visible(path))
+#     path = os.path.join(path, latest)
+#     metrics = Metrics({})
+#     metrics.load(path)
+#     return metrics.archived_metrics[metric_name]
 
 
-def get_metric_obj(experiment_name: str) -> tuple[Metrics, str]:
+def extreme_mean(data, minimum: bool = True):
+    data = [i[0] for i in data] if isinstance(data[0], tuple) else data
+    value = min(data) if minimum else max(data)
+    return f"{value:.5f}"
+
+
+def get_metric_objs(experiment_name: str) -> tuple[Metrics, str]:
     """Get a metric from an experiment log"""
-    path = f"data/logs/automatic/{experiment_name}/metrics"
-    latest = max(list_dir_visible(path))
-    path = os.path.join(path, latest)
-    metrics = Metrics({})
-    desc = metrics.load(path)
-    return metrics, desc
+    path = f"data/logs/{experiment_name}"  # /metrics"
+
+    latest = max([i for i in list_dir_visible(path) if "train_" in i])
+    train_path = os.path.join(path, latest)
+
+    latest = max([i for i in list_dir_visible(path) if "validation_" in i])
+    val_path = os.path.join(path, latest)
+
+    train_metrics = Metrics()
+    train_metrics.load(train_path)
+    val_metrics = Metrics()
+    val_metrics.load(val_path)
+
+    has_test_data = any("test_" in i for i in list_dir_visible(path))
+    if has_test_data:
+        latest = max([i for i in list_dir_visible(path) if "test_" in i])
+        test_path = os.path.join(path, latest)
+        test_metrics = Metrics()
+        test_metrics.load(test_path)
+
+        return train_metrics, val_metrics, test_metrics
+    return train_metrics, val_metrics, None
+
+
+def get_metric(exp_name, metric_name, epoch_level: bool = True):
+    train, val, test = get_metric_objs(exp_name)
+    if epoch_level:
+        return train.get_epoch_level(metric_name), val.get_epoch_level(metric_name)
+    return train.get_batch_level(metric_name), val.get_batch_level(metric_name)
 
 
 def get_multi_experiment_metric(experiment_base_name: str, metric_name: str) -> dict:
     """
     Get the metric data for a given metric across all experiments in a multi-config experiment.
     """
-    path = f"data/logs/automatic/{experiment_base_name}"
+    path = f"data/logs/{experiment_base_name}"
     # print(path, list(list_dir_visible(path)))
     names = [(i, f"{experiment_base_name}/{i}") for i in list_dir_visible(path)]
     return {
@@ -227,7 +204,54 @@ def get_multi_experiment_metric(experiment_base_name: str, metric_name: str) -> 
     }
 
 
+def get_best_performance(
+    base_name: str, metrics: list[str], metrics_processor=extreme_mean
+):
+    columns = ["test"] + metrics
+    path = f"data/logs/{base_name}"
+
+    # train metrics table
+    data = {i: [] for i in list_dir_visible(path)}
+
+    for metric_name in metrics:
+        for exp_name, metric_values in get_multi_experiment_metric(
+            base_name, metric_name
+        ).items():
+            processed_metrics = metrics_processor(metric_values[0])
+            data[exp_name].append(processed_metrics)
+
+    print_table(
+        columns,
+        [[exp_name] + values for exp_name, values in ordered_dict(data)],
+        title="Training results",
+    )
+
+    # validation metrics table
+    data = {i: [] for i in list_dir_visible(path)}
+
+    for metric_name in metrics:
+        for exp_name, metric_values in get_multi_experiment_metric(
+            base_name, metric_name
+        ).items():
+            processed_metrics = metrics_processor(metric_values[1])
+            data[exp_name].append(processed_metrics)
+
+    print_table(
+        columns,
+        [[exp_name] + values for exp_name, values in ordered_dict(data)],
+        title="Validation results",
+    )
+
+
 def multi_experiment_plotting(base_name: str):
-    
+    pass
+
+
 if "__main__" in __name__:
-    multi_experiment_plotting("MNIST_grid_test", False)
+    # multi_experiment_plotting("first_test", False)
+    for i in ["se", "kernel", "nll", "crps"]:
+        print("loss:", i)
+        get_best_performance(
+            i + "_casp_doga",
+            ["gaussian_se", "gaussian_kernel", "gaussian_nll", "gaussian_crps"],
+        )

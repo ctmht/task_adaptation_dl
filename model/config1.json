@@ -1,23 +1,81 @@
 {
     "experiments": [
         {
-            "base_name": "airlines_net_arch_lr",
+            "base_name": "se_casp_doga",
             "dataset_name": "casp",
-            "lr": [
-                1e-5
+            "lr": 1e-3,
+            "dropout": [
+                0.05,
+                0.1,
+                0.2,
+                0.3
             ],
             "loss_type": "gaussian_se",
-            "num_epochs": 100,
             "hidden_dims": [
-                [
-                    512,
-                    512,
-                    512,
-                    512
-                ]
+                64,
+                64,
+                64
+            ]
+        },
+        {
+            "base_name": "kernel_casp_doga",
+            "dataset_name": "casp",
+            "lr": 1e-3,
+            "dropout": [
+                0.05,
+                0.1,
+                0.2,
+                0.3
             ],
-            "batch_size": 128
+            "loss_type": "gaussian_kernel",
+            "loss_gk_gamma": [
+                0.5,
+                1,
+                2,
+                4
+            ],
+            "hidden_dims": [
+                64,
+                64,
+                64
+            ]
+        },
+        {
+            "base_name": "nll_casp_doga",
+            "dataset_name": "casp",
+            "lr": 5e-3,
+            "dropout": [
+                0.05,
+                0.1,
+                0.2,
+                0.3
+            ],
+            "loss_type": "gaussian_nll",
+            "hidden_dims": [
+                64,
+                64,
+                64
+            ]
+        },
+        {
+            "base_name": "crps_casp_doga",
+            "dataset_name": "casp",
+            "lr": 1e-3,
+            "dropout": [
+                0.05,
+                0.1,
+                0.2,
+                0.3
+            ],
+            "loss_type": "gaussian_crps",
+            "hidden_dims": [
+                64,
+                64,
+                64
+            ]
         }
     ],
-    "do_not_vary": []
+    "do_not_vary": [
+        "hidden_dims"
+    ]
 }

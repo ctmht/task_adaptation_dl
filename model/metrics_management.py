@@ -22,8 +22,9 @@ def stats(iterator):
 
 
 class Metrics:
-    def __init__(self) -> None:
+    def __init__(self, per_epoch: bool = True) -> None:
         self.data = {}
+        self.per_epoch = per_epoch
 
     def new_epoch(self):
         for k in self.data.keys():
@@ -36,9 +37,14 @@ class Metrics:
         epoch_list.append(value)
 
     def get_epoch_level(self, data_name: str):
-        return [mean(i) for i in self.data[data_name]]
+        if not self.per_epoch:
+            print(self.per_epoch)
+            return [mean(i) for i in self.data[data_name]]
+        return [i for i in self.data[data_name]]
 
     def get_batch_level(self, data_name: str):
+        if self.per_epoch:
+            raise ValueError("Can't get per batch level for per epoch metrics manager")
         total = []
         for i in self.data[data_name]:
             total += copy(i)
