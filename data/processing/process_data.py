@@ -64,6 +64,7 @@ def arff_to_train_val_test_h5(
     splits=(0.8, 0.1, 0.1),
     seed: int = 42,
     chunksize: int = 250_000,
+    arcsinh_transform: bool = True
 ):
     p_train, p_val, p_test = splits
     p_train = float(p_train)
@@ -133,7 +134,7 @@ def arff_to_train_val_test_h5(
                 for c in numeric_cols:
                     df[c] = pd.to_numeric(df[c], errors="coerce")
                 df = df.dropna(subset=[target_col])
-
+                
                 r = rng.random(len(df))
                 train_mask = r < p_train
 
@@ -150,6 +151,7 @@ def arff_to_train_val_test_h5(
 
             r = rng.random(len(df))
             train_mask = r < p_train
+            
             x_scaler.partial_fit(df.loc[train_mask, z_cols])
             y_scaler.partial_fit(df.loc[train_mask, [target_col]])
 
@@ -218,13 +220,16 @@ def arff_to_train_val_test_h5(
 
                 # z-transform remaining numeric features
                 df[z_cols] = x_scaler.transform(df[z_cols])
-
+                
                 y = pd.DataFrame(
                     y_scaler.transform(df[[target_col]]),
                     columns=[target_col],
                     index=df.index,
                 )
-
+                
+                if arcsinh_transform:
+                    y[target_col] = np.arcsinh(y[target_col])
+                
                 df = df.drop(
                     columns=["Month", "DayOfWeek", "CRSDepTime", "CRSArrTime", target_col]
                 )
