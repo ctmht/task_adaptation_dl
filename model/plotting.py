@@ -37,9 +37,12 @@ def ordering_key(text: str):
     ]
 
 
-def ordered_dict(dictionary):
+def ordered_dict(dictionary, build_dict: bool = False):
     keys = sorted(list(dictionary.keys()), key=ordering_key)
-    return ((k, dictionary[k]) for k in keys)
+    gen = ((k, dictionary[k]) for k in keys)
+    if not build_dict:
+        return gen
+    return {k: v for k, v in gen}
 
 
 def test_performance_line(
@@ -92,13 +95,10 @@ def variable_value_lines(
     fig = plt.figure(figsize=(16 * scaling, 9 * scaling))
     colours = sns.color_palette("crest", n_colors=len(data.keys()))
     names = order if order else data.keys()
-    line_styles = line_styles or [""] * len(names)
+    line_styles = line_styles or ["-"] * len(names)
     for name, c, style in zip(names, colours, line_styles):
         line = data[name]
-        if name[0] == "b":
-            name = r"$\beta$" + name[1:]
-        elif name[0] == "z":
-            name = r"$|z|$" + name[2:]
+        # print("line", line, len(x if x else range(1, len(line) + 1)), c, style, name)
         plt.plot(
             x if x else range(1, len(line) + 1),
             line,
@@ -180,6 +180,12 @@ def get_metric_objs(experiment_name: str) -> tuple[Metrics, str]:
         test_path = os.path.join(path, latest)
         test_metrics = Metrics()
         test_metrics.load(test_path)
+        # print("loading test data")
+        # print(
+        #     len(train_metrics.get_epoch_level("gaussian_se")),
+        #     len(val_metrics.get_epoch_level("gaussian_se")),
+        #     len(test_metrics.get_epoch_level("gaussian_se")),
+        # )
 
         return train_metrics, val_metrics, test_metrics
     return train_metrics, val_metrics, None
@@ -202,6 +208,18 @@ def get_multi_experiment_metric(experiment_base_name: str, metric_name: str) -> 
     return {
         sub_name: get_metric(full_name, metric_name) for sub_name, full_name in names
     }
+
+
+def get_cleaned_multi_exp_metric(
+    base_name: str, metric: str, run_type: str = "validation"
+) -> dict:
+    index = ["train", "validation", "test"].index(run_type)
+    data = get_multi_experiment_metric(base_name, metric)
+    # print(list(data.keys()))
+    # print(data[list(data.keys())[0]])
+    data = {k: v[index] for k, v in data.items()}
+    # print(data)
+    return {k: [i[0] for i in v] for k, v in data.items()}
 
 
 def get_best_performance(
@@ -243,15 +261,35 @@ def get_best_performance(
     )
 
 
-def multi_experiment_plotting(base_name: str):
-    pass
+def multi_experiment_plotting(base_name: str, metrics: list[str]):
+    os.makedirs("data/images/" + base_name, exist_ok=True)
+
+    for metric in metrics:
+        base_name_path = f"{base_name}"
+        data = ordered_dict(
+            get_cleaned_multi_exp_metric(base_name, metric), build_dict=True
+        )
+        variable_value_lines(
+            data,
+            title=f"{metric} across tests",
+            y_label=metric,
+            x_label="epochs",
+            path=os.path.join(base_name_path, f"{metric}_across_tests"),
+            log=False,
+        )
 
 
 if "__main__" in __name__:
     # multi_experiment_plotting("first_test", False)
-    for i in ["se", "kernel", "nll", "crps"]:
+    dataset = "casp"
+    test_type = "doga"
+    metrics = ["gaussian_se", "gaussian_kernel", "gaussian_nll", "gaussian_crps"]
+    for i in [i.split("_")[1] for i in metrics]:
         print("loss:", i)
+        exp_base = f"{i}_{dataset}_{test_type}"
         get_best_performance(
-            i + "_casp_doga",
-            ["gaussian_se", "gaussian_kernel", "gaussian_nll", "gaussian_crps"],
+            exp_base,
+            metrics,
         )
+
+        multi_experiment_plotting(exp_base, metrics)

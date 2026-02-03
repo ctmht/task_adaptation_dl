@@ -78,6 +78,7 @@ def get_casp(
         X, y, test_size=test_size, random_state=random_state
     )
 
+    val_size = val_size / (1 - test_size)
     X_train, X_val, y_train, y_val = train_test_split(
         X_train, y_train, test_size=val_size, random_state=random_state
     )

@@ -55,6 +55,13 @@ class Metrics:
             for k in self.data.keys()
         }
 
+    def append(self, other):
+        for k in other.data.keys():
+            if k in self.data:
+                self.data[k] += other.data[k]
+            else:
+                self.data[k] = copy(other.data[k])
+
     def save(self, path: str, sub_name: str) -> None:
         print(f"Saving metrics {list(self.data.keys())} to:", path)
         # print("data:", self.data)

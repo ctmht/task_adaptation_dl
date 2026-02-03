@@ -16,6 +16,10 @@ from model.metrics_management import Metrics, mean
 from model.trunk_module import TrunkModule
 from model.score_losses import *
 
+from rich.traceback import install
+
+install()
+
 
 # torch.multiprocessing.set_start_method("fork", force=True)
 
@@ -60,7 +64,6 @@ def _forwardpass_over_data(
     validation: bool = False,
     **hyperparameters: dict[str, Any],
 ):
-    """ """
     experiment_path = os.path.join(
         "data", "logs", hyperparameters["base_name"], hyperparameters["_specific_name"]
     )
@@ -89,11 +92,12 @@ def _forwardpass_over_data(
         num_epochs = 1  # Force one epoch
 
         if use_mcdropout:
-            print("Not training this epoch. Using model.eval_mcdropout()")
+            # print("Not training this epoch. Using model.eval_mcdropout()")
             model.eval_mcdropout()
         else:
-            print("Not training this epoch. Using model.eval()")
+            # print("Not training this epoch. Using model.eval()")
             model.eval()
+
     else:
         # Training hyperparameters
         lr = hyperparameters.get("lr", 1e-4)
@@ -112,6 +116,7 @@ def _forwardpass_over_data(
 
         model.train()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0.0)
+        validation_metrics_manager = Metrics()
 
     # Setup model device
     device_name = GLOBAL_DEVICE
@@ -189,19 +194,27 @@ def _forwardpass_over_data(
         )
 
         if training:
-            loss = validate_model(
+            val_metrics = validate_model(
                 model, val_input_data, val_output_data, **hyperparameters
             )
+            validation_metrics_manager.append(val_metrics)
+            print(hyperparameters["loss_type"])
+            loss = mean(val_metrics.get_epoch_level(hyperparameters["loss_type"])[0])
             if early_stopping and early_stopping_tracker(loss):
                 break
 
-    # hell yeah, nested one line if-statements!
-    metrics_manager.save(
-        experiment_path,
-        "train" if training else ("validation" if validation else "test"),
-    )
-
-    return mean(metrics[hyperparameters["loss_type"]])
+    if not validation:
+        metrics_manager.save(
+            experiment_path,
+            "train" if training else "test",
+        )
+    if training:
+        os.makedirs("data/models/" + hyperparameters["base_name"], exist_ok=True)
+        model.save(
+            hyperparameters["base_name"] + "/" + hyperparameters["_specific_name"]
+        )
+        validation_metrics_manager.save(experiment_path, "validation")
+    return metrics_manager
 
 
 def train_model(model, input_data, output_data, **hyperparameters: dict[str, Any]):
@@ -255,8 +268,8 @@ def experiment_from_config(config: dict):
         # num_epochs=config["num_epochs"],
         # l2reg_strength=config["l2reg_strength"],  # not implemented,
         # early_stopping=config["early_stopping"],
-        val_input_data=dataset.train_features,
-        val_output_data=dataset.train_labels,
+        val_input_data=dataset.val_features,
+        val_output_data=dataset.val_labels,
         **config,
     )
 

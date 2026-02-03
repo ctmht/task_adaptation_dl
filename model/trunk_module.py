@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 
 import torch
@@ -109,23 +110,34 @@ class TrunkModule(nn.Module):
         super(TrunkModule, self).eval()
         self._mcdropout = True
 
+    def save(self, sub_path: str):
+        path = "data/models"
+        path = os.path.join(path, sub_path)
+        torch.save(self, path)
+
+    @classmethod
+    def load(cls, sub_path: str):
+        path = os.path.join("data/models", sub_path)
+        return torch.load(path, weights_only=False)
+
 
 if __name__ == "__main__":
-    BATCH_SIZE = 1
-    NUM_PREDICTORS = 10
-    N_FEATURES = 9
-
-    model = TrunkModule(
-        n_features=N_FEATURES, hidden_dims=[32, 16], activation="tanh", dropout=0.3
-    )
-
-    model.eval_mcdropout()
-
-    # Check input-output shapes and that dropout masks actually apply uniquely
-    # to each predictor if we do this
-    dummy_in = torch.rand(BATCH_SIZE, N_FEATURES)
-    dummy_in = dummy_in.unsqueeze(1).repeat(1, NUM_PREDICTORS, 1)
-    dummy_out = model(dummy_in)
-
-    print(dummy_in, dummy_out, dummy_in.shape, dummy_out.shape, sep="\n")
-
+    # BATCH_SIZE = 1
+    # NUM_PREDICTORS = 10
+    # N_FEATURES = 9
+    #
+    # model = TrunkModule(
+    #     n_features=N_FEATURES, hidden_dims=[32, 16], activation="tanh", dropout=0.3
+    # )
+    #
+    # model.eval_mcdropout()
+    #
+    # # Check input-output shapes and that dropout masks actually apply uniquely
+    # # to each predictor if we do this
+    # dummy_in = torch.rand(BATCH_SIZE, N_FEATURES)
+    # dummy_in = dummy_in.unsqueeze(1).repeat(1, NUM_PREDICTORS, 1)
+    # dummy_out = model(dummy_in)
+    #
+    # print(dummy_in, dummy_out, dummy_in.shape, dummy_out.shape, sep="\n")
+    model = TrunkModule.load("se_casp_lr/lr=0.001")
+    print(model(torch.rand((1, 9))))

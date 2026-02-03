@@ -1,5 +1,7 @@
 .*
 data/logs/
+data/images/
+data/models/
 .notes/
 .venv/
 .idea/

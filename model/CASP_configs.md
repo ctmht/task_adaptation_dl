@@ -4,7 +4,7 @@
 {
     "experiments": [
         {
-            "base_name": "se_casp_lr",
+            "base_name": "se_casp_lr2",
             "dataset_name": "casp",
             "lr": [
                 1e-2,
@@ -25,7 +25,7 @@
             ]
         },
         {
-            "base_name": "kernel_casp_lr",
+            "base_name": "kernel_casp_lr2",
             "dataset_name": "casp",
             "lr": [
                 1e-2,
@@ -46,7 +46,7 @@
             ]
         },
         {
-            "base_name": "nll_casp_lr",
+            "base_name": "nll_casp_lr2",
             "dataset_name": "casp",
             "lr": [
                 1e-2,
@@ -67,7 +67,7 @@
             ]
         },
         {
-            "base_name": "crps_casp_lr",
+            "base_name": "crps_casp_lr2",
             "dataset_name": "casp",
             "lr": [
                 1e-2,
@@ -127,7 +127,7 @@
         {
             "base_name": "nll_casp_doga",
             "dataset_name": "casp",
-            "lr": 5e-3,
+            "lr": 1e-3,
             "dropout": [0.05, 0.1, 0.2, 0.3],
             "loss_type": "gaussian_nll",
             "hidden_dims": [

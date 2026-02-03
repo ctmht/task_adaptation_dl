@@ -43,7 +43,7 @@
         {
             "base_name": "nll_casp_doga",
             "dataset_name": "casp",
-            "lr": 5e-3,
+            "lr": 1e-3,
             "dropout": [
                 0.05,
                 0.1,
