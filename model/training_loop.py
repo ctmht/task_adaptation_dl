@@ -16,9 +16,9 @@ from model.metrics_management import Metrics, mean
 from model.trunk_module import TrunkModule
 from model.score_losses import *
 
-from rich.traceback import install
+# from rich.traceback import install
 
-install()
+# install()
 
 
 # torch.multiprocessing.set_start_method("fork", force=True)
@@ -35,7 +35,7 @@ GLOBAL_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class EarlyStopping:
-    def __init__(self, patience: int = 5) -> None:
+    def __init__(self, patience: int = 10) -> None:
         self.patience = patience
         self.last_improvement = 0
         self.best = 1e100
@@ -112,7 +112,7 @@ def _forwardpass_over_data(
         if early_stopping:
             val_input_data = hyperparameters["val_input_data"]
             val_output_data = hyperparameters["val_output_data"]
-            early_stopping_tracker = EarlyStopping(patience=3)
+            early_stopping_tracker = EarlyStopping(patience=10)
 
         model.train()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0.0)
@@ -259,6 +259,7 @@ def experiment_from_config(config: dict):
         "Model parameters count:",
         sum(p.numel() for p in model.parameters() if p.requires_grad),
     )
+    print(len(dataset.train_labels))
 
     hyperparameters = dict(
         # loss=config["loss_type"],
@@ -285,7 +286,7 @@ def experiment_from_config(config: dict):
 
 
 def main():
-    configs = load_configs(path="model/config1.json")
+    configs = load_configs(path="model/config2.json")
     for i in tqdm_bar(configs):
         experiment_from_config(i)
 
