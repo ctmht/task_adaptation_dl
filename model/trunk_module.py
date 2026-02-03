@@ -117,7 +117,10 @@ class TrunkModule(nn.Module):
 
     @classmethod
     def load(cls, sub_path: str):
-        path = os.path.join("data/models", sub_path)
+        try:
+            path = os.path.join("data", "models", sub_path)
+        except FileNotFoundError:
+            path = path
         return torch.load(path, weights_only=False)
 
 
