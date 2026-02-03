@@ -15,9 +15,10 @@
             "loss_type": "gaussian_se",
             "num_epochs": 20,
             "hidden_dims": [
-                64,
-                64,
-                64
+                512,
+                512,
+                512,
+                512
             ]
         }
     ],

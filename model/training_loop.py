@@ -203,6 +203,16 @@ def _forwardpass_over_data(
             validation_metrics_manager.append(val_metrics)
             print(hyperparameters["loss_type"])
             loss = mean(val_metrics.get_epoch_level(hyperparameters["loss_type"])[0])
+            if early_stopping_tracker.improves(loss):
+                os.makedirs(
+                    "data/models/" + hyperparameters["base_name"], exist_ok=True
+                )
+                model.save(
+                    hyperparameters["base_name"]
+                    + "/"
+                    + hyperparameters["_specific_name"]
+                    + "__best"
+                )
             if early_stopping and early_stopping_tracker(loss):
                 break
 
