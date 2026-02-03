@@ -8,6 +8,10 @@ data/models/
 .vscode/
 jupyter/
 # data
+*airlines*
+cat_encoders.pkl
+depdelay_scaler.pkl
+x_scaler.pkl
 *__pycache__*
 *AIRLINES_10M*
 
