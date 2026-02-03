@@ -91,7 +91,7 @@ def test_performance_line(
     if log:
         plt.yscale("log")
     if path is not None:
-        fig.savefig(f"data/logs/{path}")
+        fig.savefig(f"data/images/{path}.png")
     if show:
         plt.show()
     plt.close("all")
@@ -308,14 +308,29 @@ def multi_experiment_plotting(base_name: str, metrics: list[str]):
 if "__main__" in __name__:
     # multi_experiment_plotting("first_test", False)
     dataset = "casp"
-    test_type = "doga"
+    test_type = "lr2"
     metrics = ["gaussian_se", "gaussian_kernel", "gaussian_nll", "gaussian_crps"]
-    for i in [i.split("_")[1] for i in metrics]:
-        print("loss:", i)
-        exp_base = f"{i}_{dataset}_{test_type}"
-        get_best_performance(
-            exp_base,
-            metrics,
-        )
+    sub_metrics = [i.split("_")[1] for i in metrics]
+    combined_plots = False
+    if combined_plots:
+        for i in sub_metrics:
+            print("loss:", i)
+            exp_base = f"{i}_{dataset}_{test_type}"
+            get_best_performance(
+                exp_base,
+                metrics,
+            )
 
-        multi_experiment_plotting(exp_base, metrics)
+            multi_experiment_plotting(exp_base, metrics)
+
+    for sm, me in zip(sub_metrics, metrics):
+        exp_base = f"{sm}_{dataset}_{test_type}"
+        train_data = get_cleaned_multi_exp_metric(exp_base, me, "train")
+        val_data = get_cleaned_multi_exp_metric(exp_base, me, "validation")
+
+        for k, v in train_data.items():
+            test_performance_line(
+                {"train": v, "validation": val_data[k]},
+                title=k,
+                path=os.path.join(exp_base, f"{k}_loss_plot"),
+            )
