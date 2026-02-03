@@ -11,8 +11,15 @@ from typing import Literal
 
 import numpy as np
 import torch
+from torch.utils import data
+from model.datasets import get_dataset
+from model.plotting import running_average, variable_value_lines
+from model.training_loop import GLOBAL_DEVICE
+from model.trunk_module import TrunkModule
 from scipy.special import hyp1f1
 from tqdm import tqdm
+from model.score_losses import *
+from model.datasets import get_dataloader
 
 
 class GaussianUQMeasure:
@@ -186,8 +193,7 @@ class GaussianUQMeasure:
         return au, eu
 
 
-if __name__ == "__main__":
-    main()
+## From here on it's our own code
 
 
 def main():
@@ -195,34 +201,74 @@ def main():
 
     warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-    BATCH_SIZE = 10
+    BATCH_SIZE = 128
     NUM_PREDICTORS = 50
+    GAMMA = 2.0
+    NAME_TO_SCORE = {
+        "kernel": GaussianKernelScore,
+        "var": SquaredError,  # TODO: check this
+        "log": NLL,
+        "crps": NormalCRPS,
+    }
 
     pred_large = torch.rand(BATCH_SIZE, 5, 6, 2, NUM_PREDICTORS) * 100
 
-    predicted = []
+    measures = ["crps", "kernel", "log", "var"]
+    prediction_uqs = {k: [] for k in measures}
+
+    dataset = get_dataset("casp")
+    model = TrunkModule.load("kernel_casp_doga/dropout=0.3-loss_gk_gamma=2")
+    model.eval_mcdropout()
+    features = torch.from_numpy(dataset.test_features.copy().astype(np.float32))
+    labels = torch.from_numpy(dataset.train_labels.copy().astype(np.float32))
+    device = torch.device(GLOBAL_DEVICE)
+    model = model.to(device)
 
     for batch_X, batch_y in tqdm(
-        get_dataloader(X_tensor, y_tensor, batch_size),
+        get_dataloader(features, labels, BATCH_SIZE),
         desc="UQ predictions",
     ):
-        # pred = torch.rand(BATCH_SIZE, 5, 6, 2, NUM_PREDICTORS) * 100  # Example mu tensor
-        uq = GaussianUQMeasure(
-            pred_large, variant="pairwise", second_order="mc_dropout"
+        predictions = torch.stack(
+            [model(batch_X.to(device)) for _ in range(NUM_PREDICTORS)], dim=-1
         )
-
         # pred2 = torch.rand(BATCH_SIZE, 2, NUM_PREDICTORS)  # Example mu2 tensor
-        uq2 = GaussianUQMeasure(
-            pred_large, variant="pairwise", second_order="mc_dropout"
+        uq = GaussianUQMeasure(
+            predictions,
+            variant="pairwise",
+            second_order="mc_dropout",
+            gamma=GAMMA,
         )
-
-        measures = ["crps", "kernel", "log", "var"]
 
         for measure in measures:
-            print(measure)
+            # print(predictions.shape, batch_y.shape)
             au, eu, tu = uq.get_uncertainties(measure=measure)
-            au2, eu2, tu2 = uq2.get_uncertainties(measure=measure)
-            print(au.mean(), eu.mean(), tu.mean())
-            print(au2.mean(), eu2.mean(), tu2.mean())
-            print()
+            loss = NAME_TO_SCORE[measure](reduction=None, loss_gk_gamma=GAMMA)(
+                predictions.mean(dim=-1), batch_y.to(device)
+            )
+            # print(loss.shape)
+            for i in range(batch_X.shape[0]):
+                prediction_uqs[measure].append(
+                    (
+                        loss[i].item(),
+                        au[i].item(),
+                        eu[i].item(),
+                        tu[i].item(),
+                    )
+                )
+    for k in prediction_uqs.keys():
+        prediction_uqs[k].sort(reverse=True)
+
+    for i, v in enumerate(["loss", "AU", "EU", "TU"]):
+        variable_value_lines(
+            {
+                k: running_average([j[i] for j in v], 30)
+                for k, v in prediction_uqs.items()
+            },
+            linewidth=3,
+            title=v,
+        )
+
+
+if __name__ == "__main__":
+    main()
 

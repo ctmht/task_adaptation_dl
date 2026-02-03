@@ -10,7 +10,7 @@ from rich.table import Table
 from rich import box
 import re
 
-from metrics_management import Metrics
+from model.metrics_management import Metrics
 
 sns.set_theme()
 
@@ -43,6 +43,31 @@ def ordered_dict(dictionary, build_dict: bool = False):
     if not build_dict:
         return gen
     return {k: v for k, v in gen}
+
+
+# function gotten from bachelor thesis code
+def running_average(
+    sequence,
+    size_average: int = 5,
+    discards_beginning: bool = False,
+) -> list[float]:
+    if size_average <= 1:
+        return sequence
+    old_size_average = size_average
+    size_average = min(size_average, len(sequence))
+    # the running_sum and first output creation code below is not efficient
+    running_sum = sum(sequence[:size_average])
+    if not discards_beginning:
+        output = [sum(sequence[: i + 1]) / (i + 1) for i in range(size_average)]
+    else:
+        output = []
+    for i in range(size_average, len(sequence)):
+        running_sum -= sequence[i - size_average]
+        running_sum += sequence[i]
+        output.append(running_sum / size_average)
+
+    size_average = old_size_average
+    return output
 
 
 def test_performance_line(
@@ -82,6 +107,7 @@ def variable_value_lines(
     x_label: str = "",
     y_label: str = "",
     line_styles: list[str] | None = None,
+    linewidth: int | float = 3,
     order: list[str] | None = None,
 ) -> None:
     """
@@ -105,7 +131,7 @@ def variable_value_lines(
             label=name,
             color=c,
             linestyle=style,
-            linewidth=3,
+            linewidth=linewidth,
         )
 
     plt.title(title)
