@@ -51,6 +51,9 @@ class EarlyStopping:
 
         return self.last_improvement >= self.patience
 
+    def improves(self, new_value: float) -> bool:
+        return new_value < self.best
+
 
 def ensure_environment(path, overwrite: bool = True):
     os.makedirs(path, exist_ok=overwrite)

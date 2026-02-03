@@ -1,7 +1,7 @@
 {
     "experiments": [
         {
-            "base_name": "se_airlines_lr",
+            "base_name": "nll_airlines_lr",
             "dataset_name": "airlines",
             "lr": [
                 1e-2,
@@ -12,7 +12,7 @@
                 5e-5,
                 1e-5
             ],
-            "loss_type": "gaussian_se",
+            "loss_type": "gaussian_nll",
             "num_epochs": 20,
             "hidden_dims": [
                 64,

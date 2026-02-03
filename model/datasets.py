@@ -30,7 +30,7 @@ class ArrayDataset(Dataset):
         self.labels = labels
 
     def __len__(self) -> int:
-        return min(100000, self.data_points.shape[0])
+        return min(1_000_000, self.data_points.shape[0])
 
     def __getitem__(self, index: int):
         return self.data_points[index], self.labels[index]
